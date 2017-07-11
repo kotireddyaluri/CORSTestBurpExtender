@@ -16,7 +16,6 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
     private String request;
     
     List<String> payloads=new ArrayList<String>();
-    String severity="";
     IHttpRequestResponse checkRequestResponse;
     
         
@@ -65,6 +64,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 		IHttpService httpService=baseRequestResponse.getHttpService();
 		IRequestInfo rinfo=helpers.analyzeRequest(baseRequestResponse);
 		List<String> headers=rinfo.getHeaders();
+		payloads.clear();
 		
 		payloads.add("null");
 		payloads.add("https://koti2.in");
@@ -77,11 +77,11 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 			{
 				String hosts[]=headers.get(i).split(":");
 				host=hosts[1].trim();
-				println(host);
+				
 				break;
 			}
 		}
-		payloads.add("https://"+host);
+		//payloads.add("https://"+host);
 		String shost[]=host.split("\\.");
 		payloads.add("https://not"+shost[shost.length-2]+"."+shost[shost.length-1]);
 		
@@ -130,42 +130,36 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 					String originValue=head[1];
 					
 					byte[] match=respHeaders.get(i).toString().getBytes();
-					
-					while (start < checkRequestResponse.getResponse().length)
-				    {
-				        start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
-				        if (start == -1)
-				        {
-				            break;
-				        }
-					    else
-				        {
-				        	matches.add(new int[] { start, start + match.length });
-				        	start += match.length;
-				        }
-				    }
 					if(originValue.equalsIgnoreCase(payloads.get(p)))
 					{
-						println(originValue);
-						severity="High";
+					
+						while (start < checkRequestResponse.getResponse().length)
+					    {
+					        start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
+					        if (start == -1)
+					        {
+					            break;
+					        }
+						    else
+					        {
+					        	matches.add(new int[] { start, start + match.length });
+					        	start += match.length;
+					        }
+					    }
+						
+						//report the issue
+						List<IScanIssue>issues = new ArrayList<>(1);
+					    issues.add(new CustomScanIssue(
+					    checkRequestResponse.getHttpService(),
+					    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
+					    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 					    
+					    "CORS (Mis)configuration",
+						"CORS (Mis)configuration Detected",
+						"High"));
+						return issues;
 					}
-					else
-					{
-						println(originValue);
-						severity="Information";
-					}
-					//report the issue
-					List<IScanIssue>issues = new ArrayList<>(1);
-				    issues.add(new CustomScanIssue(
-				    checkRequestResponse.getHttpService(),
-				    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
-				    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 					    
-				    "CORS (Mis)configuration",
-					"CORS (Mis)configuration Detected",
-					severity));
-					return issues;
-				}
-			}
+			 }
+		  }
 		}
 		return null;
 				
