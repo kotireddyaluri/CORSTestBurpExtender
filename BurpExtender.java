@@ -15,7 +15,8 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
     private OutputStream output;
     private String request;
     
-    private String testOrigin="https://corstestx22x.com";
+    List<String> payloads=new ArrayList<String>();
+    String severity="";
     IHttpRequestResponse checkRequestResponse;
     
         
@@ -57,181 +58,112 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 		println("Successfully Loaded CORS Test Extender");
 	}//end of UI logic
 	
-	/*public List<IScanIssue> findMatch(IHttpRequestResponse CheckedReqRes, byte[] match, String originValue)
-	{
 		
-		List<int[]> matches=new ArrayList<int[]>();
-		int start=0;
-		int mp=0;
-	
-		//match=originValue.toString().getBytes();
-		while (start < checkRequestResponse.getResponse().length)
-        {
-            start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
-            if (start == -1)
-            {
-                break;
-            }
-            else
-            {
-            	matches.add(new int[] { start, start + match.length });
-            	start += match.length;
-            	
-            }
-         }
-		
-		//report the issue
-		List<IScanIssue>issues = new ArrayList<>(1);
-	    issues.add(new CustomScanIssue(
-	    checkRequestResponse.getHttpService(),
-	    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
-	    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 
-	    "CORS Misconfiguration",
-	    "CORS Misconfiguration Detected",
-	    "High"));
-	    return issues;
-	}*/
-	
-	
 	@Override
 	public List<IScanIssue> doPassiveScan(IHttpRequestResponse baseRequestResponse) 
 	{
 		IHttpService httpService=baseRequestResponse.getHttpService();
 		IRequestInfo rinfo=helpers.analyzeRequest(baseRequestResponse);
-		List<String> headers=rinfo.getHeaders();		
+		List<String> headers=rinfo.getHeaders();
+		
+		payloads.add("null");
+		payloads.add("https://koti2.in");
+		
+		String host="";
+		
+		for(int i=0;i< headers.size();i++)
+	   	{
+			if(headers.get(i).startsWith("Host"))
+			{
+				String hosts[]=headers.get(i).split(":");
+				host=hosts[1].trim();
+				println(host);
+				break;
+			}
+		}
+		payloads.add("https://"+host);
+		String shost[]=host.split("\\.");
+		payloads.add("https://not"+shost[shost.length-2]+"."+shost[shost.length-1]);
+		
 		
 		request=new String(baseRequestResponse.getRequest());
 		String reqBody=request.substring(rinfo.getBodyOffset());
-		//Add or update Origin header
-		int orignPresent=0;
-		for(int i=0;i< headers.size();i++)
-	   	{
-			if(headers.get(i).startsWith("Origin"))
-			{
-				headers.set(i, "Origin: "+testOrigin);
-				orignPresent=1;
+		
+
+		for(int p=0;p<payloads.size();p++)
+		{
+			//Add or update Origin header
+			int orignPresent=0;
+			for(int i=0;i< headers.size();i++)
+		   	{
+				if(headers.get(i).startsWith("Origin"))
+				{
+					headers.set(i, "Origin: "+payloads.get(p));
+					orignPresent=1;
+				}
 			}
-		}
-		if(orignPresent==0)
-		{
-			headers.add(headers.size()-1, "Origin: "+testOrigin);
-		}
-		
-		/*for(int i=0;i< headers.size();i++)
-	   	{
-			println(headers.get(i));
-	   	}
-		*/
-		//Request with updated Headers
-		byte[] completeReq=helpers.buildHttpMessage(headers, reqBody.getBytes());		
-		
-		
-		IHttpRequestResponse checkRequestResponse = callbacks.makeHttpRequest(
-                baseRequestResponse.getHttpService(), callbacks.makeHttpRequest(httpService, completeReq).getRequest());
-		
-		IResponseInfo respInfo=helpers.analyzeResponse(checkRequestResponse.getResponse());
-		List<String> respHeaders=respInfo.getHeaders();
-		
-		
-		List<int[]> matches=new ArrayList<int[]>();	
-		int start=0;
-		
-		
-		for(int i=0;i<respHeaders.size();i++)
-		{
-			if(respHeaders.get(i).toLowerCase().startsWith("access-control-allow-origin"))
+			if(orignPresent==0)
 			{
-				String head[]=respHeaders.get(i).split(" ");
-				String originValue=head[1];
-				
-				byte[] match=respHeaders.get(i).toString().getBytes();
-				
-				if(originValue.equalsIgnoreCase(testOrigin))
+				headers.add(headers.size()-1, "Origin: "+payloads.get(p));
+			}
+			
+			//Request with updated Headers
+			byte[] completeReq=helpers.buildHttpMessage(headers, reqBody.getBytes());		
+			
+			
+			IHttpRequestResponse checkRequestResponse = callbacks.makeHttpRequest(
+	                baseRequestResponse.getHttpService(), callbacks.makeHttpRequest(httpService, completeReq).getRequest());
+			
+			IResponseInfo respInfo=helpers.analyzeResponse(checkRequestResponse.getResponse());
+			List<String> respHeaders=respInfo.getHeaders();
+			
+			
+			List<int[]> matches=new ArrayList<int[]>();	
+			int start=0;
+			
+			
+			for(int i=0;i<respHeaders.size();i++)
+			{
+				if(respHeaders.get(i).toLowerCase().startsWith("access-control-allow-origin"))
 				{
-					//findMatch(checkRequestResponse,match,originValue);
-					while (start < checkRequestResponse.getResponse().length)
-			        {
-			            start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
-			            if (start == -1)
-			            {
-			                break;
-			            }
-			            else
-			            {
-			            	matches.add(new int[] { start, start + match.length });
-			            	start += match.length;
-			            	
-			            }
-			         }
+					String head[]=respHeaders.get(i).split(" ");
+					String originValue=head[1];
 					
+					byte[] match=respHeaders.get(i).toString().getBytes();
+					
+					while (start < checkRequestResponse.getResponse().length)
+				    {
+				        start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
+				        if (start == -1)
+				        {
+				            break;
+				        }
+					    else
+				        {
+				        	matches.add(new int[] { start, start + match.length });
+				        	start += match.length;
+				        }
+				    }
+					if(originValue.equalsIgnoreCase(payloads.get(p)))
+					{
+						println(originValue);
+						severity="High";
+					}
+					else
+					{
+						println(originValue);
+						severity="Information";
+					}
 					//report the issue
 					List<IScanIssue>issues = new ArrayList<>(1);
 				    issues.add(new CustomScanIssue(
 				    checkRequestResponse.getHttpService(),
 				    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
-				    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 
-				    "CORS Misconfiguration",
-				    "CORS Misconfiguration Detected",
-				    "High"));
-				    return issues;
-				}
-				else if(originValue.equals("*"))
-				{
-					
-					while (start < checkRequestResponse.getResponse().length)
-			        {
-			            start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
-			            if (start == -1)
-			            {
-			                break;
-			            }
-			            else
-			            {
-			            	matches.add(new int[] { start, start + match.length });
-			            	start += match.length;
-			            	
-			            }
-			         }
-									
-					//report the issue
-					List<IScanIssue>issues = new ArrayList<>(1);
-				    issues.add(new CustomScanIssue(
-				    checkRequestResponse.getHttpService(),
-				    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
-				    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 
-				    "CORS Misconfiguration",
-				    "CORS Misconfiguration Detected",
-				    "Low"));
-				    return issues;
-				}
-				else if(!originValue.isEmpty())
-				{
-					
-					while (start < checkRequestResponse.getResponse().length)
-			        {
-			            start = helpers.indexOf(checkRequestResponse.getResponse(), match, true, start, checkRequestResponse.getResponse().length);
-			            if (start == -1)
-			            {
-			                break;
-			            }
-			            else
-			            {
-			            	matches.add(new int[] { start, start + match.length });
-			            	start += match.length;
-			            	
-			            }
-			         }
-					
-					//report the issue
-					List<IScanIssue>issues = new ArrayList<>(1);
-				    issues.add(new CustomScanIssue(
-				    checkRequestResponse.getHttpService(),
-				    helpers.analyzeRequest(checkRequestResponse).getUrl(), 
-				    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 
-				    "CORS Enabled",
-				    "Give a try for CORS Misconfiguration issue",
-				    "Information"));
-				    return issues;
+				    new IHttpRequestResponse[] { callbacks.applyMarkers(checkRequestResponse, null, matches) }, 					    
+				    "CORS (Mis)configuration",
+					"CORS (Mis)configuration Detected",
+					severity));
+					return issues;
 				}
 			}
 		}
