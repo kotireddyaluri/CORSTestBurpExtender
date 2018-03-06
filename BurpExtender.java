@@ -84,6 +84,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 		//payloads.add("https://"+host);
 		String shost[]=host.split("\\.");
 		payloads.add("https://not"+shost[shost.length-2]+"."+shost[shost.length-1]);
+		payloads.add("https://"+shost[shost.length-2]+"."+shost[shost.length-1]+".koti2.in");
 		
 		
 		request=new String(baseRequestResponse.getRequest());
@@ -96,7 +97,7 @@ public class BurpExtender implements IBurpExtender, IScannerCheck
 			int orignPresent=0;
 			for(int i=0;i< headers.size();i++)
 		   	{
-				if(headers.get(i).startsWith("Origin"))
+				if(headers.get(i).startsWith("Origin")||headers.get(i).startsWith("origin"))
 				{
 					headers.set(i, "Origin: "+payloads.get(p));
 					orignPresent=1;
